@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>离线回测看板</title>
+  <style>/*__DASHBOARD_CSS__*/</style>
+  <script>/*__ECHARTS_JS__*/</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳至主要内容</a>
+  <header class="shell-header">
+    <div>
+      <p class="eyebrow">离线权威回测 · 研究用途</p>
+      <h1 id="dashboard-title">离线回测看板</h1>
+      <p id="header-summary" class="header-summary"></p>
+    </div>
+    <div class="header-badge"><span>运行状态</span><strong id="run-status"></strong></div>
+  </header>
+
+  <nav class="tabs" aria-label="看板视图">
+    <button class="tab active" data-tab="overview" aria-selected="true">总览</button>
+    <button class="tab" data-tab="performance" aria-selected="false">收益表现</button>
+    <button class="tab" data-tab="risk" aria-selected="false">风险与分布</button>
+    <button class="tab" data-tab="trades" aria-selected="false">交易分析</button>
+    <button class="tab" data-tab="quality" aria-selected="false">执行与数据可信度</button>
+    <button class="tab" data-tab="runs" aria-selected="false">运行记录</button>
+  </nav>
+
+  <aside class="filter-panel" aria-label="全局交易筛选">
+    <div class="filter-title"><strong>筛选范围</strong><span id="filter-count"></span></div>
+    <label>开始日期<input id="date-start" type="date"></label>
+    <label>结束日期<input id="date-end" type="date"></label>
+    <label>年份<select id="year-filter"><option value="">全部年份</option></select></label>
+    <details class="advanced-filters"><summary>高级筛选</summary><div class="advanced-filter-grid">
+      <label>盈亏状态<select id="outcome-filter"><option value="">全部交易</option><option value="win">盈利</option><option value="loss">亏损或持平</option></select></label>
+      <label>最短持仓天数<input id="hold-min" type="number" min="0" step="1" placeholder="不限"></label>
+      <label>最长持仓天数<input id="hold-max" type="number" min="0" step="1" placeholder="不限"></label>
+      <label>股票代码搜索<input id="symbol-filter" type="search" placeholder="例如 600000" autocomplete="off"></label>
+      <label>退出原因<select id="exit-filter"><option value="">全部退出原因</option></select></label>
+    </div></details>
+    <div class="filter-actions">
+      <button id="reset-filters" class="secondary">重置筛选</button>
+      <button id="export-csv">导出当前范围</button>
+    </div>
+  </aside>
+
+  <main id="main">
+    <section class="view active" id="view-overview" data-view="overview">
+      <div class="section-heading"><div><p class="eyebrow">核心结果</p><h2>总览</h2></div><p>基于 Primary 经济交易口径；筛选会同步更新全部 KPI、图表、分母、交易表与导出。</p></div>
+      <article class="card strategy-card"><div class="card-heading"><div><p class="eyebrow">冻结运行说明</p><h3>策略说明</h3></div><span id="strategy-scope" class="scope-badge"></span></div><div id="strategy-summary"></div><details><summary>展开规则、执行与证据</summary><div id="strategy-details"></div></details></article>
+      <div id="kpi-grid" class="kpi-grid" aria-live="polite"></div>
+      <article class="card interpretation-card" aria-live="polite"><div class="card-heading"><div><p class="eyebrow">基于当前交易范围</p><h3>结果解读</h3></div><span class="scope-badge">动态计算</span></div><div id="result-interpretation"></div></article>
+      <div class="grid two">
+        <article class="card"><h3>运行身份</h3><dl id="run-details" class="detail-list"></dl></article>
+        <article class="card"><h3>数据覆盖摘要</h3><div id="coverage-summary"></div></article>
+      </div>
+      <article class="callout right-tail"><div><p class="eyebrow">关键结构</p><h3>右尾依赖不是脚注</h3></div><p id="tail-headline"></p></article>
+    </section>
+
+    <section class="view" id="view-performance" data-view="performance" hidden>
+      <div class="section-heading"><div><p class="eyebrow">时间维度</p><h2>收益表现与市场背景</h2></div><p>交易筛选影响策略交易视图；沪深300仅按可用日期粒度展示市场背景，不与策略交易收益相减计算超额收益。</p></div>
+      <div class="grid two">
+        <article class="card wide"><h3>累计已实现净盈亏</h3><p class="chart-note">单位：人民币；不是净值曲线或组合收益曲线。</p><div id="chart-cumulative" class="chart"></div></article>
+        <article class="card"><h3>年度策略表现</h3><p class="chart-note">资本加权收益率；分母为当年交易数 × 10万元。</p><div id="chart-yearly" class="chart"></div></article>
+        <article class="card"><h3>同期沪深300市场背景</h3><p id="benchmark-note" class="chart-note">仅作市场背景；策略资本加权收益率不是固定资金组合累计收益率。</p><div id="chart-benchmark" class="chart"></div></article>
+        <article class="card"><h3>半年度策略表现</h3><p class="chart-note">Profit Factor；绝对柱从零开始。</p><div id="chart-half" class="chart"></div></article>
+         <article class="card wide"><h3>月度表现热力图</h3><p class="chart-note">资本加权收益率；每格提示包含交易数与分母。点击有交易月份进入交易分析。</p><div id="chart-monthly" class="heatmap"></div><div id="month-selection" class="selection-note" hidden><span id="month-selection-text"></span><button type="button" id="return-month-chart" class="secondary">返回月度图</button><button type="button" id="restore-month-filter" class="secondary">恢复此前筛选</button></div></article>
+         <article class="card wide"><h3>滚动 Profit Factor 对照</h3><p id="rolling-note" class="chart-note">连续自然月窗口；图例可分别隐藏/显示 3M 与 6M。窗口不足或缺源月份会明确标注。</p><div id="chart-rolling" class="chart"></div></article>
+      </div>
+    </section>
+
+    <section class="view" id="view-risk" data-view="risk" hidden>
+      <div class="section-heading"><div><p class="eyebrow">交易级风险</p><h2>风险与分布</h2></div><p>所有百分比均同时显示分母与交易数；不把交易级分布冒充日频组合风险。</p></div>
+      <div class="unavailable"><strong>组合风险指标</strong><span>当前产物不支持该指标</span><p>缺少有效日频组合净值序列，因此不展示 Sharpe、Sortino、波动率或组合回撤。</p></div>
+      <div class="grid two">
+        <article class="card"><h3>单笔交易收益分布</h3><div id="chart-return-dist" class="chart"></div></article>
+        <article class="card"><h3>盈利交易与亏损交易分布</h3><div id="chart-winloss-dist" class="chart"></div></article>
+        <article class="card"><h3>持仓天数分布</h3><div id="chart-holding" class="chart"></div></article>
+        <article class="card"><h3>P90 / P95 / P99 收益</h3><div id="chart-quantiles" class="chart"></div></article>
+        <article class="card"><h3>收益阈值占比</h3><div id="chart-thresholds" class="chart"></div></article>
+        <article class="card right-tail-panel"><h3>Top 5% 正盈利贡献与剔除后表现</h3><div id="chart-tail" class="chart"></div><div id="tail-details"></div></article>
+      </div>
+    </section>
+
+    <section class="view" id="view-trades" data-view="trades" hidden>
+      <div class="section-heading"><div><p class="eyebrow">逐笔证据</p><h2>交易分析</h2></div><p>当前账本没有独立 Entry 原因字段，因此不展示对应分布或筛选器。</p></div>
+      <article id="month-drilldown-banner" class="callout month-drilldown" hidden><div><p class="eyebrow">月份下钻</p><strong id="month-drilldown-text"></strong></div><div class="drilldown-actions"><button type="button" id="trades-return-month-chart" class="secondary">返回月度图</button><button type="button" id="trades-restore-month-filter" class="secondary">恢复此前筛选</button></div></article>
+      <div id="winner-loser" class="stat-strip"></div>
+      <div class="grid two">
+        <article class="card"><h3>退出原因分布</h3><div id="chart-exit-reason" class="chart"></div></article>
+        <article class="card"><h3>持仓时间分组</h3><div id="holding-groups"></div></article>
+        <article class="card"><h3>最佳交易</h3><div id="best-trades"></div></article>
+        <article class="card"><h3>最差交易</h3><div id="worst-trades"></div></article>
+      </div>
+      <article id="trade-detail-section" class="card table-card">
+        <div class="table-toolbar"><div><h3>交易明细</h3><p id="table-scope"></p></div><label>每页行数<select id="page-size"><option>25</option><option>50</option><option>100</option></select></label></div>
+        <div class="table-wrap"><table><thead><tr id="trade-head"></tr></thead><tbody id="trade-body"></tbody></table></div>
+        <div class="pagination"><button id="page-prev" class="secondary">上一页</button><span id="page-status"></span><button id="page-next" class="secondary">下一页</button></div>
+      </article>
+    </section>
+
+    <section class="view" id="view-quality" data-view="quality" hidden>
+      <div class="section-heading"><div><p class="eyebrow">可复核证据</p><h2>执行与数据可信度</h2></div><p>状态仅来自现有清单、验证产物或显式字段证据；文件存在本身不构成 PASS。</p></div>
+      <div id="audit-grid" class="audit-grid"></div>
+      <article class="card"><h3>因子覆盖趋势</h3><p class="chart-note">可用粒度来自伴随分析；月度精确覆盖分母缺失时保持 PARTIAL。</p><div id="chart-factor" class="chart"></div></article>
+      <article class="card"><h3>来源与定义</h3><div id="source-list"></div></article>
+    </section>
+
+    <section class="view" id="view-runs" data-view="runs" hidden>
+      <div class="section-heading"><div><p class="eyebrow">研究谱系</p><h2>运行记录</h2></div><p>只有五项可比性键全部一致的运行才允许直接比较。</p></div>
+      <article class="callout"><h3>比较兼容性规则</h3><p id="compatibility-note"></p></article>
+      <article class="card table-card"><div class="table-wrap"><table><thead><tr><th>策略标识</th><th>分析类型</th><th>运行编号</th><th>日期范围</th><th>运行状态</th><th>交易数</th><th>Profit Factor</th><th>资本加权收益率</th><th>源产物</th><th>看板</th><th>比较兼容性</th><th>操作</th></tr></thead><tbody id="run-catalog"></tbody></table></div></article>
+    </section>
+  </main>
+  <dialog id="trade-detail" class="trade-dialog"><button id="close-trade-detail" class="dialog-close" aria-label="关闭详情">×</button><h2>交易详情</h2><dl id="trade-detail-body" class="detail-list"></dl></dialog>
+
+  <footer>离线静态看板 · 数据与 HTML 已保留 SHA-256 哈希 · 无远程脚本、字体或实时数据库连接</footer>
+  <noscript><div class="noscript">此看板需要启用本地 JavaScript 才能进行筛选、绘图和分页。</div></noscript>
+  <script id="dashboard-data" type="application/json">__DASHBOARD_DATA__</script>
+  <script>/*__DASHBOARD_JS__*/</script>
+</body>
+</html>
